@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReflexLab - Reaction Time Tester</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#312e81',
+            }
+          },
+          animation: {
+            'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'ping-once': 'ping 0.3s cubic-bezier(0, 0, 0.2, 1) 1',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* Target Arena Container Positioning */
+    .arena-container {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    /* Soft Glow effects */
+    .glow-green {
+      box-shadow: 0 0 50px -10px rgba(34, 197, 94, 0.4);
+    }
+    .glow-red {
+      box-shadow: 0 0 50px -10px rgba(239, 68, 68, 0.4);
+    }
+    .glow-indigo {
+      box-shadow: 0 0 50px -10px rgba(99, 102, 241, 0.4);
+    }
+
+    /* Flash transition effect */
+    .flash-active {
+      transition: background-color 0.15s ease-out, box-shadow 0.15s ease-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- Main Container -->
+  <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow flex flex-col gap-6">
+    
+    <!-- Top Header & Navigation -->
+    <header class="flex flex-col sm:flex-row justify-between items-center gap-4 pb-4 border-b border-slate-800">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+          <i class="fa-solid fa-bolt text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">ReflexLab</h1>
+          <p class="text-xs text-slate-400">Precision Human Latency & Reaction Benchmark</p>
+        </div>
+      </div>
+
+      <!-- Mode Selector Tabs -->
+      <div class="flex bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 text-sm font-medium w-full sm:w-auto overflow-x-auto">
+        <button id="tab-classic" onclick="setMode('classic')" class="mode-tab flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-slate-300 hover:text-white active-tab">
+          <i class="fa-solid fa-stopwatch text-brand-500"></i>
+          <span>Classic Speed</span>
+        </button>
+        <button id="tab-target" onclick="setMode('target')" class="mode-tab flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-crosshairs text-rose-500"></i>
+          <span>Visual Target</span>
+        </button>
+        <button id="tab-sound" onclick="setMode('sound')" class="mode-tab flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-volume-high text-amber-500"></i>
+          <span>Audio Tone</span>
+        </button>
+        <button id="tab-avg5" onclick="setMode('avg5')" class="mode-tab flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-layer-group text-emerald-500"></i>
+          <span>5-Trial Avg</span>
+        </button>
+        <button id="tab-colorMatch" onclick="setMode('colorMatch')" class="mode-tab flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-palette text-fuchsia-400"></i>
+          <span>Color Match</span>
+        </button>
+        <button id="tab-qte" onclick="setMode('qte')" class="mode-tab flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-keyboard text-cyan-400"></i>
+          <span>WASD QTE</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area Grid -->
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow">
+      
+      <!-- Interactive Test Screen Area (2 Cols on Large Screens) -->
+      <section class="lg:col-span-2 flex flex-col">
+        <div id="test-screen" class="arena-container flex-grow min-h-[380px] sm:min-h-[460px] rounded-2xl border border-slate-800 bg-slate-900/50 hover:border-slate-700 transition-all duration-300 flex flex-col items-center justify-center p-6 text-center cursor-pointer relative overflow-hidden group select-none shadow-2xl">
+          
+          <!-- Default State Content -->
+          <div id="state-idle" class="flex flex-col items-center gap-4 max-w-md">
+            <div id="mode-icon-lg" class="w-20 h-20 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-4xl text-brand-500 mb-2 group-hover:scale-105 transition-transform duration-300">
+              <i class="fa-solid fa-stopwatch"></i>
+            </div>
+            <h2 id="mode-title-lg" class="text-2xl sm:text-3xl font-extrabold text-white">Classic Reaction Test</h2>
+            <p id="mode-desc-lg" class="text-slate-400 text-sm leading-relaxed">
+              When the screen turns <span class="text-emerald-400 font-semibold">GREEN</span>, click as fast as you can anywhere on the box.
+            </p>
+            <div class="mt-4 px-5 py-2.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-slate-700 text-slate-200 font-mono text-[10px]">SPACE</span>
+              <span>or Click Anywhere to Start</span>
+            </div>
+          </div>
+
+          <!-- Waiting State Content -->
+          <div id="state-waiting" class="hidden flex-col items-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center text-3xl text-white animate-pulse">
+              <i class="fa-solid fa-hourglass-half"></i>
+            </div>
+            <h2 id="waiting-title" class="text-3xl sm:text-4xl font-extrabold text-white tracking-wide">Wait for Signal...</h2>
+            <p class="text-slate-200/80 text-sm">Keep your mouse ready. Don't click too soon!</p>
+          </div>
+
+          <!-- Ready / Click NOW State Content -->
+          <div id="state-click" class="hidden flex-col items-center gap-3">
+            <h2 class="text-5xl sm:text-7xl font-black text-white tracking-tight animate-bounce">CLICK NOW!</h2>
+            <p class="text-white/90 font-medium">Click fast!</p>
+          </div>
+
+          <!-- QTE Prompt Container -->
+          <div id="state-qte" class="hidden flex-col items-center gap-4">
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-wide">PRESS KEYS IN ORDER!</h2>
+            <div id="qte-keys-container" class="flex gap-3 my-2"></div>
+            <p class="text-cyan-200/80 text-xs">Use keys <span class="font-mono bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-white">W</span> <span class="font-mono bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-white">A</span> <span class="font-mono bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-white">S</span> <span class="font-mono bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-white">D</span></p>
+          </div>
+
+          <!-- Too Early Error State Content -->
+          <div id="state-early" class="hidden flex-col items-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-3xl">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-red-100">Too Early!</h2>
+            <p class="text-red-200/80 text-sm">You clicked before the signal. Take a breath!</p>
+            <button class="mt-2 px-6 py-2.5 rounded-xl bg-white text-slate-900 font-bold text-sm hover:bg-slate-100 transition">Try Again</button>
+          </div>
+
+          <!-- Result State Content -->
+          <div id="state-result" class="hidden flex-col items-center gap-4">
+            <div id="result-label" class="text-sm font-semibold uppercase tracking-wider text-slate-400">Your Reaction Time</div>
+            <div class="text-6xl sm:text-7xl font-black font-mono text-white tracking-tight flex items-baseline gap-2">
+              <span id="result-time">0</span>
+              <span class="text-2xl font-bold text-slate-400 font-sans">ms</span>
+            </div>
+            
+            <!-- Rating Badge -->
+            <div id="result-badge" class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-brand-500/20 text-brand-400 border border-brand-500/30 flex items-center gap-2">
+              <i id="result-badge-icon" class="fa-solid fa-bolt"></i>
+              <span id="result-rating">Lightning Fast</span>
+            </div>
+
+            <!-- Breakdown list for 5-Trial Mode -->
+          <div id="avg5-breakdown" class="hidden flex gap-2 mt-2"></div>
+
+          <p id="result-prompt" class="text-slate-400 text-xs mt-2">Click anywhere or press <span class="font-mono text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">SPACE</span> to test again.</p>
+        </div>
+
+        <!-- Visual Target Element (Only for Visual Target Mode) -->
+          <button id="target-object" class="hidden absolute w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-rose-500 text-white shadow-lg shadow-rose-500/50 flex items-center justify-center border-2 border-white transition-transform active:scale-95 focus:outline-none">
+            <i class="fa-solid fa-bullseye text-2xl"></i>
+          </button>
+
+        </div>
+      </section>
+
+      <!-- Sidebar: Live Stats & History Panel -->
+      <aside class="flex flex-col gap-6">
+        
+        <!-- Stats Summary Box -->
+        <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 flex flex-col gap-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-chart-simple text-brand-500"></i>
+              Session Statistics
+            </h3>
+            <button onclick="resetStats()" class="text-xs text-slate-400 hover:text-rose-400 transition flex items-center gap-1">
+              <i class="fa-solid fa-rotate-right"></i>
+              <span>Reset</span>
+            </button>
+          </div>
+
+          <!-- Tier Rank Badge & Progress Bar -->
+          <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 flex flex-col gap-2">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400 font-medium">Current Tier Rank</span>
+              <span id="rank-name" class="font-bold text-amber-400 flex items-center gap-1">
+                <i id="rank-icon" class="fa-solid fa-person-walking-with-cane"></i>
+                <span id="rank-text">Grandma</span>
+              </span>
+            </div>
+            <!-- Progress Bar to Next Tier -->
+            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden relative">
+              <div id="rank-progress-bar" class="bg-gradient-to-r from-amber-500 via-brand-500 to-emerald-400 h-full w-0 transition-all duration-500 rounded-full"></div>
+            </div>
+            <div class="flex justify-between items-center text-[10px] text-slate-500 font-mono">
+              <span id="tier-min">-- ms</span>
+              <span id="next-tier-label" class="text-slate-400">Target: Pro (&lt;180ms)</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+              <div class="text-[11px] font-medium text-slate-400">Personal Best</div>
+              <div class="text-2xl font-extrabold font-mono text-emerald-400 mt-1 flex items-baseline gap-1">
+                <span id="stat-pb">--</span>
+                <span class="text-xs text-slate-500 font-sans font-normal">ms</span>
+              </div>
+            </div>
+
+            <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+              <div class="text-[11px] font-medium text-slate-400">Session Avg</div>
+              <div class="text-2xl font-extrabold font-mono text-brand-400 mt-1 flex items-baseline gap-1">
+                <span id="stat-avg">--</span>
+                <span class="text-xs text-slate-500 font-sans font-normal">ms</span>
+              </div>
+            </div>
+
+            <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+              <div class="text-[11px] font-medium text-slate-400">Last Attempt</div>
+              <div class="text-2xl font-extrabold font-mono text-slate-200 mt-1 flex items-baseline gap-1">
+                <span id="stat-last">--</span>
+                <span class="text-xs text-slate-500 font-sans font-normal">ms</span>
+              </div>
+            </div>
+
+            <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+              <div class="text-[11px] font-medium text-slate-400">Total Trials</div>
+              <div class="text-2xl font-extrabold font-mono text-violet-400 mt-1">
+                <span id="stat-trials">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent History Log -->
+        <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 flex-grow flex flex-col gap-3 min-h-[250px]">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-brand-500"></i>
+              Attempt History
+            </h3>
+            <!-- Filter Option -->
+            <select id="history-filter" onchange="renderHistory()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:border-brand-500">
+              <option value="all">All Modes</option>
+              <option value="classic">Classic</option>
+              <option value="target">Target</option>
+              <option value="sound">Audio</option>
+              <option value="avg5">5-Trial Avg</option>
+              <option value="colorMatch">Color Match</option>
+              <option value="qte">WASD QTE</option>
+            </select>
+          </div>
+
+          <!-- History List Container -->
+          <div id="history-list" class="flex flex-col gap-2 overflow-y-auto max-h-[240px] pr-1"></div>
+        </div>
+      </aside>
+
+    </main>
+  </div>
+
+  <script>
+    // System State Variables
+    let currentMode = 'classic'; // 'classic' | 'target' | 'sound' | 'avg5' | 'colorMatch' | 'qte'
+    let currentState = 'idle';   // 'idle' | 'waiting' | 'ready' | 'result' | 'early'
+    
+    let timerId = null;
+    let colorLoopInterval = null; // High-speed interval for Color Match Mode
+    let targetMatchColor = null;
+    let activeMatchColor = null;
+    let startTime = 0;
+    let endTime = 0;
+    let activeRoundColor = null; // Stores dynamically picked color palette for current round
+    
+    // QTE Mode Variables
+    let qteSequence = [];
+    let qteIndex = 0;
+    const QTE_KEYS = ['w', 'a', 's', 'd'];
+
+    // 5-Trial Mode Tracking
+    let avg5Trials = [];
+    let avg5CurrentStep = 0;
+
+    // Persistent History Array
+    let historyLogs = JSON.parse(localStorage.getItem('reflexlab_history')) || [];
+
+    // Audio Context for Beep Generator
+    let audioCtx = null;
+
+    // Palette of vibrant high-contrast colors for ready triggers
+    const VIBRANT_PALETTE = [
+      { name: "Neon Emerald", bg: "bg-emerald-500", hex: "#10b981", shadow: "rgba(16, 185, 129, 0.5)", text: "text-emerald-400" },
+      { name: "Electric Cyan", bg: "bg-cyan-500", hex: "#06b6d4", shadow: "rgba(6, 182, 212, 0.5)", text: "text-cyan-400" },
+      { name: "Vivid Violet", bg: "bg-violet-600", hex: "#7c3aed", shadow: "rgba(124, 58, 237, 0.5)", text: "text-violet-400" },
+      { name: "Intense Fuchsia", bg: "bg-fuchsia-500", hex: "#d946ef", shadow: "rgba(217, 70, 239, 0.5)", text: "text-fuchsia-400" },
+      { name: "Hot Pink", bg: "bg-rose-500", hex: "#f43f5e", shadow: "rgba(244, 63, 94, 0.5)", text: "text-rose-400" },
+      { name: "Energetic Orange", bg: "bg-amber-500", hex: "#f59e0b", shadow: "rgba(245, 158, 11, 0.5)", text: "text-amber-400" },
+      { name: "Electric Lime", bg: "bg-lime-500", hex: "#84cc16", shadow: "rgba(132, 204, 22, 0.5)", text: "text-lime-400" }
+    ];
+
+    // Get random color from palette
+    function getRandomColor() {
+      const idx = Math.floor(Math.random() * VIBRANT_PALETTE.length);
+      return VIBRANT_PALETTE[idx];
+    }
+
+    // Configurations for Modes
+    const MODE_CONFIG = {
+      classic: {
+        title: "Classic Speed Test",
+        desc: "When the box switches to a <span class='text-emerald-400 font-semibold'>RANDOM COLOR</span>, click anywhere inside as fast as you can.",
+        icon: "fa-stopwatch",
+        iconColor: "text-brand-500",
+        waitingBg: "bg-red-600"
+      },
+      target: {
+        title: "Visual Target Test",
+        desc: "Wait for the colorful target to spawn at a random position, then click directly on the <span class='text-rose-400 font-semibold'>TARGET</span>.",
+        icon: "fa-crosshairs",
+        iconColor: "text-rose-500",
+        waitingBg: "bg-slate-900/90"
+      },
+      sound: {
+        title: "Sound Reaction Test",
+        desc: "Listen carefully. Click anywhere on the box as soon as you hear the <span class='text-amber-400 font-semibold'>HIGH TONE</span>.",
+        icon: "fa-volume-high",
+        iconColor: "text-amber-500",
+        waitingBg: "bg-slate-900/90"
+      },
+      avg5: {
+        title: "5-Trial Average Test",
+        desc: "Complete <span class='text-emerald-400 font-semibold'>5 consecutive reaction tests</span>. Your final benchmark average will be computed at the end.",
+        icon: "fa-layer-group",
+        iconColor: "text-emerald-500",
+        waitingBg: "bg-red-600"
+      },
+      colorMatch: {
+        title: "Color Match Reflex",
+        desc: "Watch the rapid color sequence. Click or press space <span class='text-fuchsia-400 font-semibold'>ONLY</span> when the target color flashes!",
+        icon: "fa-palette",
+        iconColor: "text-fuchsia-400",
+        waitingBg: "bg-slate-900/90"
+      },
+      qte: {
+        title: "WASD Quick Time Event",
+        desc: "When the sequence appears, press the <span class='text-cyan-400 font-semibold'>WASD keys</span> in the exact order shown as fast as you can!",
+        icon: "fa-keyboard",
+        iconColor: "text-cyan-400",
+        waitingBg: "bg-slate-900/90"
+      }
+    };
+
+    // DOM Elements
+    const testScreen = document.getElementById('test-screen');
+    const stateIdle = document.getElementById('state-idle');
+    const stateWaiting = document.getElementById('state-waiting');
+    const stateClick = document.getElementById('state-click');
+    const stateQte = document.getElementById('state-qte');
+    const qteKeysContainer = document.getElementById('qte-keys-container');
+    const stateEarly = document.getElementById('state-early');
+    const stateResult = document.getElementById('state-result');
+    const targetObject = document.getElementById('target-object');
+
+    const modeTitleLg = document.getElementById('mode-title-lg');
+    const modeDescLg = document.getElementById('mode-desc-lg');
+    const modeIconLg = document.getElementById('mode-icon-lg');
+
+    const resultTime = document.getElementById('result-time');
+    const resultRating = document.getElementById('result-rating');
+    const resultBadge = document.getElementById('result-badge');
+    const resultBadgeIcon = document.getElementById('result-badge-icon');
+    const resultLabel = document.getElementById('result-label');
+    const resultPrompt = document.getElementById('result-prompt');
+    const avg5Breakdown = document.getElementById('avg5-breakdown');
+    const waitingTitle = document.getElementById('waiting-title');
+
+    // Init App
+    window.onload = () => {
+      updateStatsDisplay();
+      renderHistory();
+      
+      // Global Event Listeners
+      testScreen.addEventListener('click', handleScreenClick);
+      targetObject.addEventListener('click', handleTargetClick);
+      
+      window.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+
+        // Handle QTE Mode keys
+        if (currentMode === 'qte') {
+          if (currentState === 'waiting' && ['w','a','s','d',' '].includes(key)) {
+            triggerEarlyClick();
+            return;
+          }
+          if (currentState === 'ready') {
+            if (['w','a','s','d'].includes(key)) {
+              handleQTEKeyPress(key);
+              return;
+            }
+          }
+        }
+
+        if (e.code === 'Space') {
+          // Prevent page scroll
+          e.preventDefault();
+          if (currentState === 'ready' && currentMode === 'target') {
+            // In target mode, pressing space counts as missing the target circle
+            triggerEarlyClick();
+          } else {
+            handleScreenClick(e);
+          }
+        }
+      });
+    };
+
+    // Initialize Web Audio Context on user interaction
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // Play synthesized tone
+    function playTone(freq = 880, duration = 0.15) {
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {
+        console.warn('Audio playback not supported or blocked:', e);
+      }
+    }
+
+    // Switch Application Modes
+    function setMode(mode) {
+      if (currentState === 'waiting' || currentState === 'ready') {
+        cancelTest();
+      }
+
+      currentMode = mode;
+      avg5Trials = [];
+      avg5CurrentStep = 0;
+      clearInterval(colorLoopInterval);
+      
+      // Update Tab Styles
+      document.querySelectorAll('.mode-tab').forEach(tab => {
+        tab.classList.remove('bg-slate-800', 'text-white', 'shadow-sm');
+        tab.classList.add('text-slate-400');
+      });
+
+      const activeTab = document.getElementById(`tab-${mode}`);
+      activeTab.classList.add('bg-slate-800', 'text-white', 'shadow-sm');
+      activeTab.classList.remove('text-slate-400');
+
+      // Update Screen Header Info
+      const cfg = MODE_CONFIG[mode];
+      modeTitleLg.innerText = cfg.title;
+      modeDescLg.innerHTML = cfg.desc;
+      modeIconLg.className = `w-20 h-20 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-4xl ${cfg.iconColor} mb-2 group-hover:scale-105 transition-transform duration-300`;
+      modeIconLg.innerHTML = `<i class="fa-solid ${cfg.icon}"></i>`;
+
+      setUIState('idle');
+      updateStatsDisplay();
+    }
+
+    // Manage UI State Presentations
+    function setUIState(state) {
+      currentState = state;
+
+      // Reset base container styles & inline dynamic styles
+      testScreen.className = "arena-container flex-grow min-h-[380px] sm:min-h-[460px] rounded-2xl border border-slate-800 bg-slate-900/50 hover:border-slate-700 transition-all duration-300 flex flex-col items-center justify-center p-6 text-center cursor-pointer relative overflow-hidden group select-none shadow-2xl";
+      testScreen.style.backgroundColor = "";
+      testScreen.style.boxShadow = "";
+
+      // Hide all states first
+      stateIdle.classList.add('hidden');
+      stateWaiting.classList.add('hidden');
+      stateClick.classList.add('hidden');
+      stateQte.classList.add('hidden');
+      stateEarly.classList.add('hidden');
+      stateResult.classList.add('hidden');
+      targetObject.classList.add('hidden');
+      avg5Breakdown.classList.add('hidden');
+
+      const cfg = MODE_CONFIG[currentMode];
+
+      switch(state) {
+        case 'idle':
+          stateIdle.classList.remove('hidden');
+          stateIdle.classList.add('flex');
+          break;
+
+        case 'waiting':
+          stateWaiting.classList.remove('hidden');
+          stateWaiting.classList.add('flex');
+          if (currentMode === 'classic' || currentMode === 'avg5') {
+            waitingTitle.innerText = currentMode === 'avg5' ? `Trial ${avg5CurrentStep + 1} of 5 - Wait...` : "Wait for Color Change...";
+          } else if (currentMode === 'sound') {
+            waitingTitle.innerText = "Wait for Sound...";
+          } else if (currentMode === 'colorMatch') {
+            waitingTitle.innerHTML = `Stop on <span class="${targetMatchColor.text} underline uppercase">${targetMatchColor.name}</span>!`;
+          } else if (currentMode === 'qte') {
+            waitingTitle.innerText = "Get Ready for WASD Prompt...";
+          } else {
+            waitingTitle.innerText = "Wait for Target...";
+          }
+          testScreen.className = `arena-container flex-grow min-h-[380px] sm:min-h-[460px] rounded-2xl transition-all duration-300 flex flex-col items-center justify-center p-6 text-center cursor-pointer relative overflow-hidden select-none ${cfg.waitingBg}`;
+          break;
+
+        case 'ready':
+          if (currentMode === 'target') {
+            positionTarget();
+            targetObject.classList.remove('hidden');
+            testScreen.className = `arena-container flex-grow min-h-[380px] sm:min-h-[460px] rounded-2xl transition-all duration-200 flex flex-col items-center justify-center p-6 text-center cursor-pointer relative overflow-hidden select-none bg-slate-900/90`;
+          } else if (currentMode === 'qte') {
+            stateQte.classList.remove('hidden');
+            stateQte.classList.add('flex');
+            renderQTEKeys();
+            testScreen.className = `arena-container flex-grow min-h-[380px] sm:min-h-[460px] rounded-2xl transition-all duration-200 flex flex-col items-center justify-center p-6 text-center cursor-pointer relative overflow-hidden select-none bg-cyan-950/60 border-2 border-cyan-500`;
+            testScreen.style.boxShadow = `0 0 60px -5px rgba(6, 182, 212, 0.4)`;
+          } else if (currentMode === 'classic' || currentMode === 'avg5') {
+            stateClick.classList.remove('hidden');
+            stateClick.classList.add('flex');
+            testScreen.className = `arena-container flex-grow min-h-[380px] sm:min-h-[460px] rounded-2xl transition-all duration-150 flex flex-col items-center justify-center p-6 text-center cursor-pointer relative overflow-hidden select-none ${activeRoundColor.bg}`;
+            testScreen.style.boxShadow = `0 0 60px -5px ${activeRoundColor.shadow}`;
+          } else if (currentMode === 'sound') {
+            stateClick.classList.remove('hidden');
+            stateClick.classList.add('flex');
+            testScreen.className = `arena-container flex-grow min-h-[380px] sm:min-h-[460px] rounded-2xl transition-all duration-200 flex flex-col items-center justify-center p-6 text-center cursor-pointer relative overflow-hidden select-none ${activeRoundColor.bg}/20 border-2 border-${activeRoundColor.bg.replace('bg-', '')}`;
+            testScreen.style.boxShadow = `0 0 60px -5px ${activeRoundColor.shadow}`;
+          } else if (currentMode === 'colorMatch') {
+            stateClick.classList.remove('hidden');
+            stateClick.classList.add('flex');
+            testScreen.className = `arena-container flex-grow min-h-[380px] sm:min-h-[460px] rounded-2xl transition-all duration-75 flex flex-col items-center justify-center p-6 text-center cursor-pointer relative overflow-hidden select-none ${activeMatchColor.bg}`;
+            testScreen.style.boxShadow = `0 0 60px -5px ${activeMatchColor.shadow}`;
+          }
+          break;
+
+        case 'early':
+          stateEarly.classList.remove('hidden');
+          stateEarly.classList.add('flex');
+          testScreen.classList.add('bg-red-900/40', 'border-red-600', 'glow-red');
+          break;
+
+        case 'result':
+          stateResult.classList.remove('hidden');
+          stateResult.classList.add('flex');
+          testScreen.classList.add('bg-slate-900/90', 'border-slate-700');
+          
+          // Flash feedback matching round color
+          if (activeRoundColor) {
+            testScreen.style.boxShadow = `0 0 40px -5px ${activeRoundColor.shadow}`;
+          }
+          break;
+      }
+    }
+
+    // Render QTE Key Prompt Boxes
+    function renderQTEKeys() {
+      qteKeysContainer.innerHTML = qteSequence.map((key, idx) => {
+        let statusClasses = "bg-slate-800 border-slate-700 text-slate-300";
+        if (idx < qteIndex) {
+          statusClasses = "bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/50 scale-95";
+        } else if (idx === qteIndex) {
+          statusClasses = "bg-cyan-500 border-white text-slate-950 font-black scale-110 shadow-lg shadow-cyan-500/50 animate-pulse";
+        }
+        return `
+          <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 flex items-center justify-center text-2xl font-black font-mono transition-all duration-150 ${statusClasses}">
+            ${key.toUpperCase()}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Handle WASD Keyboard Inputs for QTE Mode
+    function handleQTEKeyPress(pressedKey) {
+      if (pressedKey === qteSequence[qteIndex]) {
+        qteIndex++;
+        playTone(600 + (qteIndex * 150), 0.08); // Rising pitch per correct key
+        renderQTEKeys();
+
+        if (qteIndex >= qteSequence.length) {
+          completeTest();
+        }
+      } else {
+        triggerEarlyClick();
+      }
+    }
+
+    // Handle Main Box Interaction
+    function handleScreenClick(e) {
+      // Prevent screen click handler if the target button was directly clicked
+      if (e.target.closest('#target-object')) return;
+
+      initAudio();
+
+      if (currentState === 'idle') {
+        if (currentMode === 'avg5') {
+          avg5Trials = [];
+          avg5CurrentStep = 0;
+        }
+        startTest();
+      } else if (currentState === 'result') {
+        if (currentMode === 'avg5' && avg5CurrentStep < 5) {
+          startTest();
+        } else {
+          if (currentMode === 'avg5') {
+            avg5Trials = [];
+            avg5CurrentStep = 0;
+          }
+          startTest();
+        }
+      } else if (currentState === 'early') {
+        if (currentMode === 'avg5') {
+          avg5Trials = [];
+          avg5CurrentStep = 0;
+        }
+        startTest();
+      } else if (currentState === 'waiting') {
+        if (currentMode === 'colorMatch') {
+          triggerEarlyClick();
+        } else {
+          triggerEarlyClick();
+        }
+      } else if (currentState === 'ready') {
+        if (currentMode === 'target') {
+          // In target mode, clicking anywhere besides the target object counts as missing
+          triggerEarlyClick();
+        } else if (currentMode === 'qte') {
+          // Clicking box in QTE mode does nothing (keyboard required)
+          return;
+        } else if (currentMode === 'colorMatch') {
+          if (activeMatchColor.name === targetMatchColor.name) {
+            completeTest();
+          } else {
+            triggerEarlyClick();
+          }
+        } else {
+          completeTest();
+        }
+      }
+    }
+
+    // Handle Specific Target Click for Target Mode
+    function handleTargetClick(e) {
+      e.stopPropagation();
+      if (currentState === 'ready' && currentMode === 'target') {
+        completeTest();
+      }
+    }
+
+    // Begin Reaction Cycle
+    function startTest() {
+      // Pick a new vibrant dynamic color for this round
+      activeRoundColor = getRandomColor();
+      clearInterval(colorLoopInterval);
+
+      if (currentMode === 'qte') {
+        // Generate random 4-key WASD sequence
+        qteSequence = [];
+        qteIndex = 0;
+        for (let i = 0; i < 4; i++) {
+          qteSequence.push(QTE_KEYS[Math.floor(Math.random() * QTE_KEYS.length)]);
+        }
+      }
+
+      if (currentMode === 'colorMatch') {
+        targetMatchColor = getRandomColor();
+        setUIState('waiting');
+
+        // Number of distractors before target color appears (2 to 5)
+        const distractorsCount = Math.floor(Math.random() * 4) + 2;
+        let step = 0;
+
+        // Flash dynamic colors sequence every 350-500ms
+        colorLoopInterval = setInterval(() => {
+          step++;
+          if (step <= distractorsCount) {
+            // Pick a non-target distractor color
+            let distractor = getRandomColor();
+            while (distractor.name === targetMatchColor.name) {
+              distractor = getRandomColor();
+            }
+            activeMatchColor = distractor;
+            setUIState('ready');
+            playTone(300, 0.05); // Short tick sound
+          } else {
+            // Target Color Appears!
+            clearInterval(colorLoopInterval);
+            activeMatchColor = targetMatchColor;
+            activeRoundColor = targetMatchColor;
+            startTime = performance.now();
+            setUIState('ready');
+            playTone(880, 0.15); // Target pop sound
+          }
+        }, Math.floor(Math.random() * 150) + 350);
+
+        return;
+      }
+
+      setUIState('waiting');
+
+      // Random delay between 2 to 5 seconds
+      const randomDelay = Math.floor(Math.random() * 3000) + 2000;
+
+      timerId = setTimeout(() => {
+        triggerReadyState();
+      }, randomDelay);
+    }
+
+    // Trigger Ready State when timeout elapses
+    function triggerReadyState() {
+      startTime = performance.now();
+      setUIState('ready');
+
+      if (currentMode === 'sound') {
+        playTone(1000, 0.2); // Loud high tone for reaction audio
+      }
+    }
+
+    // User Clicked Too Early
+    function triggerEarlyClick() {
+      clearTimeout(timerId);
+      clearInterval(colorLoopInterval);
+      playTone(200, 0.3); // Low error tone
+      if (currentMode === 'avg5') {
+        avg5Trials = [];
+        avg5CurrentStep = 0;
+      }
+      setUIState('early');
+    }
+
+    // Cancel active test timeout
+    function cancelTest() {
+      clearTimeout(timerId);
+      clearInterval(colorLoopInterval);
+      if (currentMode === 'avg5') {
+        avg5Trials = [];
+        avg5CurrentStep = 0;
+      }
+      setUIState('idle');
+    }
+
+    // Complete Trial Successfully
+    function completeTest() {
+      endTime = performance.now();
+      clearInterval(colorLoopInterval);
+      const reactionTime = Math.round(endTime - startTime);
+      
+      if (currentMode !== 'sound') {
+        playTone(600, 0.1); // Short success ping
+      }
+
+      if (currentMode === 'avg5') {
+        avg5Trials.push(reactionTime);
+        avg5CurrentStep++;
+
+        if (avg5CurrentStep < 5) {
+          // Intermediate trial result view
+          resultLabel.innerText = `Trial ${avg5CurrentStep} of 5`;
+          resultTime.innerText = reactionTime;
+          const rating = getRating(reactionTime);
+          resultRating.innerText = rating.label;
+          resultBadge.className = `px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 border ${rating.color}`;
+          resultBadgeIcon.className = `fa-solid ${rating.icon}`;
+
+          // Show current trial progress chips
+          avg5Breakdown.classList.remove('hidden');
+          avg5Breakdown.innerHTML = avg5Trials.map((t, idx) => `
+            <span class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-xs font-mono text-emerald-400">
+              #${idx+1}: ${t}ms
+            </span>
+          `).join('');
+
+          resultPrompt.innerHTML = `Click anywhere or press <span class="font-mono text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">SPACE</span> for trial ${avg5CurrentStep + 1}...`;
+          setUIState('result');
+        } else {
+          // Final 5-Trial Summary
+          const sum = avg5Trials.reduce((a, b) => a + b, 0);
+          const finalAvg = Math.round(sum / 5);
+
+          resultLabel.innerText = "5-Trial Average Score";
+          resultTime.innerText = finalAvg;
+          const rating = getRating(finalAvg);
+          resultRating.innerText = rating.label;
+          resultBadge.className = `px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 border ${rating.color}`;
+          resultBadgeIcon.className = `fa-solid ${rating.icon}`;
+
+          avg5Breakdown.classList.remove('hidden');
+          avg5Breakdown.innerHTML = avg5Trials.map((t, idx) => `
+            <span class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300">
+              #${idx+1}: <strong class="text-white">${t}ms</strong>
+            </span>
+          `).join('');
+
+          resultPrompt.innerHTML = `Click anywhere or press <span class="font-mono text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">SPACE</span> to start a new 5-trial set.`;
+          setUIState('result');
+          saveAttempt(finalAvg);
+        }
+      } else {
+        resultLabel.innerText = "Your Reaction Time";
+        avg5Breakdown.classList.add('hidden');
+        resultPrompt.innerHTML = `Click anywhere or press <span class="font-mono text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">SPACE</span> to test again.`;
+        displayResult(reactionTime);
+        saveAttempt(reactionTime);
+      }
+    }
+    // Dynamic Tier Ranks Definition (From slowest to fastest)
+    const TIER_RANKS = [
+      { name: "Grandma", minMs: 400, icon: "fa-person-walking-with-cane", color: "text-amber-400", bg: "bg-amber-500/20", border: "border-amber-500/30" },
+      { name: "Sloth", minMs: 340, icon: "fa-hippo", color: "text-orange-400", bg: "bg-orange-500/20", border: "border-orange-500/30" },
+      { name: "Casual Gamer", minMs: 270, icon: "fa-gamepad", color: "text-sky-400", bg: "bg-sky-500/20", border: "border-sky-500/30" },
+      { name: "Competitive", minMs: 220, icon: "fa-crosshairs", color: "text-indigo-400", bg: "bg-indigo-500/20", border: "border-indigo-500/30" },
+      { name: "Esports Pro", minMs: 180, icon: "fa-trophy", color: "text-emerald-400", bg: "bg-emerald-500/20", border: "border-emerald-500/30" },
+      { name: "Godlike Speed", minMs: 0, icon: "fa-bolt-lightning", color: "text-fuchsia-400", bg: "bg-fuchsia-500/20", border: "border-fuchsia-500/30" }
+    ];
+
+    // Specialized Tier Ranks for QTE Sequence Mode (Calibrated for 4 keypresses)
+    const QTE_TIER_RANKS = [
+      { name: "WASD Novice", minMs: 1600, icon: "fa-keyboard", color: "text-amber-400", bg: "bg-amber-500/20", border: "border-amber-500/30" },
+      { name: "Key Stamper", minMs: 1200, icon: "fa-hand-pointer", color: "text-orange-400", bg: "bg-orange-500/20", border: "border-orange-500/30" },
+      { name: "Rhythm Typer", minMs: 900, icon: "fa-music", color: "text-sky-400", bg: "bg-sky-500/20", border: "border-sky-500/30" },
+      { name: "Fast Fingers", minMs: 700, icon: "fa-sliders", color: "text-indigo-400", bg: "bg-indigo-500/20", border: "border-indigo-500/30" },
+      { name: "WASD Demon", minMs: 500, icon: "fa-fire-flame-curved", color: "text-emerald-400", bg: "bg-emerald-500/20", border: "border-emerald-500/30" },
+      { name: "Keyboard God", minMs: 0, icon: "fa-bolt", color: "text-cyan-400", bg: "bg-cyan-500/20", border: "border-cyan-500/30" }
+    ];
+
+    // Get Tier Rank based on score ms and mode
+    function getTierRank(ms, mode = currentMode) {
+      const rankList = mode === 'qte' ? QTE_TIER_RANKS : TIER_RANKS;
+      if (!ms || ms === 0) return rankList[0];
+      for (let i = rankList.length - 1; i >= 0; i--) {
+        if (ms <= rankList[i].minMs || i === rankList.length - 1 && ms < rankList[i - 1].minMs) {
+          if (i === rankList.length - 1 && ms <= rankList[i].minMs) return rankList[i];
+          if (ms <= rankList[i].minMs) return rankList[i];
+        }
+      }
+      return rankList[0];
+    }
+
+    // Calculate Rating Feedback
+    function getRating(ms, mode = currentMode) {
+      const tier = getTierRank(ms, mode);
+      return { 
+        label: tier.name, 
+        color: `${tier.color} ${tier.bg} ${tier.border}`, 
+        icon: tier.icon 
+      };
+    }
+
+    // Render Display Result
+    function displayResult(ms) {
+      resultTime.innerText = ms;
+      const rating = getRating(ms, currentMode);
+      
+      resultRating.innerText = rating.label;
+      resultBadge.className = `px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 border ${rating.color}`;
+      resultBadgeIcon.className = `fa-solid ${rating.icon}`;
+
+      setUIState('result');
+    }
+
+    // Save Trial into Storage & Refresh Stats
+    function saveAttempt(ms) {
+      const entry = {
+        id: Date.now(),
+        mode: currentMode,
+        time: ms,
+        date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      historyLogs.unshift(entry);
+      // Keep up to 100 recent entries
+      if (historyLogs.length > 100) historyLogs.pop();
+
+      localStorage.setItem('reflexlab_history', JSON.stringify(historyLogs));
+
+      updateStatsDisplay();
+      renderHistory();
+    }
+
+    // Reset User Statistics
+    function resetStats() {
+      if (confirm("Are you sure you want to clear your reaction history?")) {
+        historyLogs = [];
+        localStorage.removeItem('reflexlab_history');
+        updateStatsDisplay();
+        renderHistory();
+      }
+    }
+
+    // Update Numerical Statistics UI
+    function updateStatsDisplay() {
+      // Filter stats by currently selected mode
+      const filtered = historyLogs.filter(item => item.mode === currentMode);
+
+      const pbElem = document.getElementById('stat-pb');
+      const avgElem = document.getElementById('stat-avg');
+      const lastElem = document.getElementById('stat-last');
+      const trialsElem = document.getElementById('stat-trials');
+
+      trialsElem.innerText = filtered.length;
+
+      if (filtered.length === 0) {
+        pbElem.innerText = '--';
+        avgElem.innerText = '--';
+        lastElem.innerText = '--';
+        updateTierUI(null);
+        return;
+      }
+
+      // Calculate PB
+      const minTime = Math.min(...filtered.map(i => i.time));
+      pbElem.innerText = minTime;
+
+      // Calculate Session Average
+      const totalSum = filtered.reduce((acc, curr) => acc + curr.time, 0);
+      const avgTime = Math.round(totalSum / filtered.length);
+      avgElem.innerText = avgTime;
+
+      // Last Attempt
+      lastElem.innerText = filtered[0].time;
+
+      // Update Tier Progress Bar & Rank Card
+      updateTierUI(minTime);
+    }
+
+    // Update Tier UI Progress Bar & Badge
+    function updateTierUI(pb) {
+      const rankText = document.getElementById('rank-text');
+      const rankIcon = document.getElementById('rank-icon');
+      const rankName = document.getElementById('rank-name');
+      const progressBar = document.getElementById('rank-progress-bar');
+      const tierMinLabel = document.getElementById('tier-min');
+      const nextTierLabel = document.getElementById('next-tier-label');
+
+      const activeRankList = currentMode === 'qte' ? QTE_TIER_RANKS : TIER_RANKS;
+
+      if (!pb) {
+        const defaultTier = activeRankList[0];
+        const nextTier = activeRankList[1];
+        rankText.innerText = defaultTier.name;
+        rankIcon.className = `fa-solid ${defaultTier.icon}`;
+        rankName.className = `font-bold ${defaultTier.color} flex items-center gap-1`;
+        progressBar.style.width = "5%";
+        tierMinLabel.innerText = "No attempts";
+        nextTierLabel.innerText = `Target: ${nextTier.name} (<${nextTier.minMs}ms)`;
+        return;
+      }
+
+      // Determine active tier based on Personal Best
+      let currentTierIndex = 0;
+      for (let i = 0; i < activeRankList.length; i++) {
+        if (pb <= activeRankList[i].minMs || i === 0 && pb > activeRankList[0].minMs) {
+          if (pb <= activeRankList[i].minMs) {
+            currentTierIndex = i;
+          }
+        }
+      }
+
+      const activeTier = activeRankList[currentTierIndex];
+      rankText.innerText = activeTier.name;
+      rankIcon.className = `fa-solid ${activeTier.icon}`;
+      rankName.className = `font-bold ${activeTier.color} flex items-center gap-1`;
+
+      // Calculate progress percentage towards the next tier level
+      if (currentTierIndex < activeRankList.length - 1) {
+        const nextTier = activeRankList[currentTierIndex + 1];
+        const currentMin = currentTierIndex === 0 ? (currentMode === 'qte' ? 2000 : 500) : activeRankList[currentTierIndex].minMs;
+        const targetMs = nextTier.minMs;
+        
+        // Progress percentage clamped between 5% and 100%
+        let progress = ((currentMin - pb) / (currentMin - targetMs)) * 100;
+        progress = Math.max(5, Math.min(100, progress));
+
+        progressBar.style.width = `${progress}%`;
+        tierMinLabel.innerText = `PB: ${pb}ms`;
+        nextTierLabel.innerText = `Next: ${nextTier.name} (<${targetMs}ms)`;
+      } else {
+        // Highest Rank Reached
+        progressBar.style.width = "100%";
+        tierMinLabel.innerText = `PB: ${pb}ms`;
+        nextTierLabel.innerText = "MAX TIER ACHIEVED!";
+      }
+    }
+
+    // Render Recent Attempt Logs Table/List
+    function renderHistory() {
+      const historyList = document.getElementById('history-list');
+      const filterMode = document.getElementById('history-filter').value;
+
+      const filtered = historyLogs.filter(item => filterMode === 'all' || item.mode === filterMode);
+
+      if (filtered.length === 0) {
+        historyList.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-slate-500 text-xs py-8">
+            <i class="fa-solid fa-inbox text-2xl mb-2 text-slate-600"></i>
+            <span>No attempts logged for this mode</span>
+          </div>`;
+        return;
+      }
+
+      historyList.innerHTML = filtered.map(item => {
+        const rating = getRating(item.time, item.mode);
+        const modeBadge = item.mode === 'classic' ? 'Speed' : item.mode === 'target' ? 'Target' : item.mode === 'sound' ? 'Audio' : item.mode === 'avg5' ? '5-Avg' : item.mode === 'qte' ? 'QTE' : 'Match';
+        const modeColor = item.mode === 'classic' ? 'text-brand-400 bg-brand-500/10' : item.mode === 'target' ? 'text-rose-400 bg-rose-500/10' : item.mode === 'sound' ? 'text-amber-400 bg-amber-500/10' : item.mode === 'avg5' ? 'text-emerald-400 bg-emerald-500/10' : item.mode === 'qte' ? 'text-cyan-400 bg-cyan-500/10' : 'text-fuchsia-400 bg-fuchsia-500/10';
+
+        return `
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/40 border border-slate-800/60 hover:border-slate-700 transition">
+            <div class="flex items-center gap-2.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${modeColor}">
+                ${modeBadge}
+              </span>
+              <span class="text-xs text-slate-400 font-mono">${item.date}</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-semibold ${rating.color.split(' ')[0]}">${rating.label}</span>
+              <span class="text-sm font-bold font-mono text-slate-100">${item.time}<span class="text-[10px] text-slate-500 font-normal">ms</span></span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  </script>
+</body>
+</html>
